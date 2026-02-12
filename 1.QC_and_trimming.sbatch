@@ -12,13 +12,13 @@
 ## CREATING DIRECTORIES ########################################################################################################################################
 
 mkdir -p ~/NGS_analysis/{data/{raw,trimmed,reference,metadata},\
-results/{rawqc,trimmedqc,alignment,variants,coverage,annotation},\
+results/{rawqc,trimmedqc,multiqc,alignment,variants,coverage,annotation},\
 scripts,\
 logs,\
 config,\
 docs}
 
-echo "Directory structure created!"
+echo "Directory structure created."
 
 ## PRESET VARIABLES ############################################################################################################################################
 
@@ -27,7 +27,7 @@ RAWDIR = ${WORKDIR}/data/raw                  # location of FASTA/Q files
 RAWQCDIR = ${WORKDIR}/results/rawqc           # storage of fastqc results for raw data
 TRIMDIR = ${WORKDIR}/data/trimmed             # storage of the trimmed data
 TRIMQCDIR = ${WORKDIR}/results/trimmedqc      # storage of fastqc results for trimmed data
-MULTIQCDIR = ${WORKDIR}/
+MULTIQCDIR = ${WORKDIR}/results/multiqc       # storage of multiqc results
 
 BASEQUAL = -q                                 # Base quality threshold: trim bases from the ends of reads if their Phred score < this value.
 MAXUNQUAL = -u                                # Maximum percentage of unqualified bases per read: if more than this % of bases are below the quality threshold (-q), the whole read is discarded. Read-level filetering.
@@ -36,6 +36,8 @@ THREADS = -t                                  # -t2 indicates 2 threads (2 CPU c
 FASTQC = "fastqc/0.12.1"
 FASTP = "fastp/0.23.2"
 MULTIQC = "multiqc/1.33"
+
+echo "Variables created."
 
 ## FASTQC - RAW DATA QUALITY CONTROL ##############################################################################################################################
 
@@ -57,6 +59,8 @@ done
 
 #unloading the module
 module unload ${FASTQC}
+
+echo "FastQC on raw data complete."
 
 ## FASTP - TRIMMING AND FILTERING RAW DATA ########################################################################################################################
 
@@ -82,6 +86,8 @@ done
 #unloading module
 module unload ${FASTP}
 
+echo "Fastp trimming and filtering complete."
+
 ## FASTQC - TRIMMED AND FILTERED DATA QUALITY CONTROL #############################################################################################################
 
 #loading the module
@@ -103,10 +109,15 @@ done
 #unload module
 module unload ${FASTQC}
 
+echo "FastQC on trimmed data complete."
+
 ## MULTIQC #####################################################################################################################################################
 
 #loading module
-module load 
+module load ${MULTIQC}
 
 
+multiqc ${TRIMDIR}\
+       -o ${MULTIQCDIR}
 
+echo "MultiQC complete."
