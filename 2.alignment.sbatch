@@ -14,3 +14,111 @@
 #SBATCH --dependency=                                   # Run only after another job finishes
 #SBATCH --account or --qos                              # Billing/project code
 #SBATCH --job-name + -d singleton                       # Only one job with this name at a time
+
+## DIRECTORIES #################################################################################################################################################
+
+WORKDIR="${HOME}/NGS_analysis"
+TRIMDIR="${WORKDIR}/data/trimmed"
+REFDIR="${WORKDIR}/data/reference"
+ALIGNDIR="${WORKDIR}/results/alignment"
+LOGDIR="${WORKDIR}/logs"
+REF="${REFDIR}/genome.fa"
+DICT="${REFDIR}/genome.dict"
+
+mkdir -p "${ALIGNDIR}" "${LOGDIR}"
+
+THREADS=8
+
+## ESTIMATION OF GENOME SIMILARITY USING MASH ##################################################################################################################
+
+# breaks sequence into k-mers, randomly subsets to statistically represent the sequence, measures overlap, Jaccard index, distance estimate.
+
+## REFERENCE PREPARATION #######################################################################################################################################
+
+# Build lookup tables for aligner
+bwa index "${REF}"
+samtools faidx "${REF}"
+picard CreateSequenceDictionary R="${REF}" O="${DICT}"
+
+# Checking that refrence genome exists
+if [ ! -f "${REF}" ]; then                                                                # if it is tested and found to not be true that a file with the name ${REF} exists, then...
+  echo "ERROR: Reference fasta not found at ${REF}" >&2                                   # tell me that this file was not found and have this message also show up in the error log (stderr)
+  exit 1                                                                                  # if this is the case then stop the script running here
+fi                                                                                        # the end of an if command
+
+# Index reference for bwa (only if index files don't exist)
+if [ ! -f "${REF}.bwt" ]; then                                                            # if the .bwt file for my reference genome does not exist, then...
+  echo "Indexing reference for bwa: $(date)"                                              # run the indexing step
+  bwa index "${REF}"
+fi
+
+# Also ensure samtools faidx and sequence dictionary exist
+if [ ! -f "${REF}.fai" ]; then                                                            # if the FASTA index (.fai) doesn’t exist, create it.
+  echo "Creating samtools faidx for ${REF}"
+  samtools faidx "${REF}"
+fi
+
+if [ ! -f "${DICT}" ]; then                                                               # if the sequence dictionary doesn't already exist , then...
+  echo "Creating sequence dictionary for ${REF}"
+  picard CreateSequenceDictionary R="${REF}" O="${DICT}"                                  # take the reference genome FASTA file and create it
+fi
+
+## ALIGNMENT ###################################################################################################################################################
+
+for R1 in ${TRIMDIR}/*_R1.trim.fastq.gz; do
+    SAMPLE=$(basename "${R1}" _R1.trim.fastq.gz)
+    R2="${TRIMDIR}/${SAMPLE}_R2.trim.fastq.gz"
+
+    echo "Starting alignment for sample: ${SAMPLE} at $(date)"
+
+    # Align with BWA MEM
+    bwa mem -t "${THREADS}" "${REF}" "${R1}" "${R2}" \
+        | samtools view -bS - > "${ALIGNDIR}/${SAMPLE}.unsorted.bam"
+
+    # Sort BAM
+    samtools sort -@ "${THREADS}" -o "${ALIGNDIR}/${SAMPLE}.sorted.bam" "${ALIGNDIR}/${SAMPLE}.unsorted.bam"
+    samtools index "${ALIGNDIR}/${SAMPLE}.sorted.bam"
+    rm "${ALIGNDIR}/${SAMPLE}.unsorted.bam"
+
+    # Mark duplicates
+    picard MarkDuplicates \
+        I="${ALIGNDIR}/${SAMPLE}.sorted.bam" \
+        O="${ALIGNDIR}/${SAMPLE}.dedup.bam" \
+        M="${ALIGNDIR}/${SAMPLE}.metrics.txt" \
+        CREATE_INDEX=true
+
+    # QC summary
+    samtools flagstat "${ALIGNDIR}/${SAMPLE}.dedup.bam" > "${ALIGNDIR}/${SAMPLE}.flagstat.txt"
+    samtools idxstats "${ALIGNDIR}/${SAMPLE}.dedup.bam" > "${ALIGNDIR}/${SAMPLE}.idxstats.txt"
+
+    echo "Finished alignment for sample: ${SAMPLE} at $(date)"
+done
+
+echo "All samples aligned successfully!"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

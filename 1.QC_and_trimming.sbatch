@@ -121,3 +121,4 @@ multiqc ${TRIMDIR}\
        -o ${MULTIQCDIR}
 
 echo "MultiQC complete."
+echo "Ensure reference genome is ready for alignment."
