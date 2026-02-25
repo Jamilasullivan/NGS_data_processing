@@ -9,9 +9,28 @@
 #SBATCH --error=%J.err         # redirect stderr to this file
 #SBATCH --output=%J.out        # redirect stdout to this file
 
-## CREATING DIRECTORIES ########################################################################################################################################
+## PRESET VARIABLES ############################################################################################################################################
 
-mkdir -p ~/NGS_analysis/{data/{raw,trimmed,reference,metadata},\
+WORKDIR=$(pwd)                              # current path
+RAWDIR=${WORKDIR}/data/raw                  # location of FASTA/Q files
+RAWQCDIR=${WORKDIR}/results/rawqc           # storage of fastqc results for raw data
+TRIMDIR=${WORKDIR}/data/trimmed             # storage of the trimmed data
+TRIMQCDIR=${WORKDIR}/results/trimmedqc      # storage of fastqc results for trimmed data
+MULTIQCDIR=${WORKDIR}/results/multiqc       # storage of multiqc results
+
+BASEQUAL=-q                                 # Base quality threshold: trim bases from the ends of reads if their Phred score < this value.
+MAXUNQUAL=-u                                # Maximum percentage of unqualified bases per read: if more than this % of bases are below the quality threshold (-q), the whole read is discarded. Read-level filetering.
+THREADS=-t                                  # -t2 indicates 2 threads (2 CPU cores to process the file in parallel.)
+
+FASTQC="fastqc/0.12.1"
+FASTP="fastp/0.23.2"
+MULTIQC="multiqc/1.33"
+
+echo "Variables created."
+
+## CREATING DIRECTORIES ####################################################################################################>
+
+mkdir -p ${WORKDIR}/{data/{raw,trimmed,reference,metadata},\
 results/{rawqc,trimmedqc,multiqc,alignment,variants,coverage,annotation},\
 scripts,\
 logs,\
@@ -19,25 +38,6 @@ config,\
 docs}
 
 echo "Directory structure created."
-
-## PRESET VARIABLES ############################################################################################################################################
-
-WORKDIR = $(pwd)                              # current path
-RAWDIR = ${WORKDIR}/data/raw                  # location of FASTA/Q files
-RAWQCDIR = ${WORKDIR}/results/rawqc           # storage of fastqc results for raw data
-TRIMDIR = ${WORKDIR}/data/trimmed             # storage of the trimmed data
-TRIMQCDIR = ${WORKDIR}/results/trimmedqc      # storage of fastqc results for trimmed data
-MULTIQCDIR = ${WORKDIR}/results/multiqc       # storage of multiqc results
-
-BASEQUAL = -q                                 # Base quality threshold: trim bases from the ends of reads if their Phred score < this value.
-MAXUNQUAL = -u                                # Maximum percentage of unqualified bases per read: if more than this % of bases are below the quality threshold (-q), the whole read is discarded. Read-level filetering.
-THREADS = -t                                  # -t2 indicates 2 threads (2 CPU cores to process the file in parallel.)
-
-FASTQC = "fastqc/0.12.1"
-FASTP = "fastp/0.23.2"
-MULTIQC = "multiqc/1.33"
-
-echo "Variables created."
 
 ## FASTQC - RAW DATA QUALITY CONTROL ##############################################################################################################################
 
