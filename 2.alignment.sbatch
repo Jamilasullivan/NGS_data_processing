@@ -67,58 +67,31 @@ fi
 
 for R1 in ${TRIMDIR}/*_R1.trim.fastq.gz; do
     SAMPLE=$(basename "${R1}" _R1.trim.fastq.gz)
-    R2="${TRIMDIR}/${SAMPLE}_R2.trim.fastq.gz"
+    R2="${TRIMDIR}/${SAMPLE}_R2.trim.fastq.gz"                                                                   # define R1 and R2
 
     echo "Starting alignment for sample: ${SAMPLE} at $(date)"
 
     # Align with BWA MEM
-    bwa mem -t "${THREADS}" "${REF}" "${R1}" "${R2}" \
-        | samtools view -bS - > "${ALIGNDIR}/${SAMPLE}.unsorted.bam"
+    bwa mem -t "${THREADS}" "${REF}" "${R1}" "${R2}" \                                                           # alignment of R1 and R2 to $REF
+        | samtools view -bS - > "${ALIGNDIR}/${SAMPLE}.unsorted.bam"                                             # converts SAM to unsorted BAM
 
     # Sort BAM
-    samtools sort -@ "${THREADS}" -o "${ALIGNDIR}/${SAMPLE}.sorted.bam" "${ALIGNDIR}/${SAMPLE}.unsorted.bam"
-    samtools index "${ALIGNDIR}/${SAMPLE}.sorted.bam"
-    rm "${ALIGNDIR}/${SAMPLE}.unsorted.bam"
+    samtools sort -@ "${THREADS}" -o "${ALIGNDIR}/${SAMPLE}.sorted.bam" "${ALIGNDIR}/${SAMPLE}.unsorted.bam"     # take the unsorted BAM files from ALIGNDIR, sort them and save them as sorted
+    samtools index "${ALIGNDIR}/${SAMPLE}.sorted.bam"                                                            # create an index file of the sorted BAM files
+    rm "${ALIGNDIR}/${SAMPLE}.unsorted.bam"                                                                      # remove unsorted files to save space
 
     # Mark duplicates
-    picard MarkDuplicates \
-        I="${ALIGNDIR}/${SAMPLE}.sorted.bam" \
-        O="${ALIGNDIR}/${SAMPLE}.dedup.bam" \
-        M="${ALIGNDIR}/${SAMPLE}.metrics.txt" \
-        CREATE_INDEX=true
+    picard MarkDuplicates \                                                                                      # use Picard to identify and flag PCR duplicates
+        I="${ALIGNDIR}/${SAMPLE}.sorted.bam" \                                                                   # use sorted BAM files as the input
+        O="${ALIGNDIR}/${SAMPLE}.dedup.bam" \                                                                    # create deduplicated BAM files as an output. The duplicates are not removed, only marked.
+        M="${ALIGNDIR}/${SAMPLE}.metrics.txt" \                                                                  # create a metrics report
+        CREATE_INDEX=true                                                                                        # create an index
 
     # QC summary
-    samtools flagstat "${ALIGNDIR}/${SAMPLE}.dedup.bam" > "${ALIGNDIR}/${SAMPLE}.flagstat.txt"
-    samtools idxstats "${ALIGNDIR}/${SAMPLE}.dedup.bam" > "${ALIGNDIR}/${SAMPLE}.idxstats.txt"
+    samtools flagstat "${ALIGNDIR}/${SAMPLE}.dedup.bam" > "${ALIGNDIR}/${SAMPLE}.flagstat.txt"                   # give alignment stats summary
+    samtools idxstats "${ALIGNDIR}/${SAMPLE}.dedup.bam" > "${ALIGNDIR}/${SAMPLE}.idxstats.txt"                   # give per-reference sequence statistics
 
     echo "Finished alignment for sample: ${SAMPLE} at $(date)"
 done
 
 echo "All samples aligned successfully!"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
