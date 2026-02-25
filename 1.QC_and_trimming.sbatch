@@ -18,13 +18,9 @@ TRIMDIR=${WORKDIR}/data/trimmed             # storage of the trimmed data
 TRIMQCDIR=${WORKDIR}/results/trimmedqc      # storage of fastqc results for trimmed data
 MULTIQCDIR=${WORKDIR}/results/multiqc       # storage of multiqc results
 
-BASEQUAL=-q                                 # Base quality threshold: trim bases from the ends of reads if their Phred score < this value.
-MAXUNQUAL=-u                                # Maximum percentage of unqualified bases per read: if more than this % of bases are below the quality threshold (-q), the whole read is discarded. Read-level filetering.
-THREADS=-t                                  # -t2 indicates 2 threads (2 CPU cores to process the file in parallel.)
-
-FASTQC="fastqc/0.12.1"
-FASTP="fastp/0.23.2"
-MULTIQC="multiqc/1.33"
+#FASTQC="fastqc/0.12.1"
+#FASTP="fastp/0.23.2"
+#MULTIQC="multiqc/1.33"
 
 echo "Variables created."
 
@@ -42,79 +38,92 @@ echo "Directory structure created."
 ## FASTQC - RAW DATA QUALITY CONTROL ##############################################################################################################################
 
 #loading the module
-module load ${FASTQC}
+#module load fastqc/0.12.1
 
-#creating base names for files - list of sample names without suffices
-for file in ${RAWDIR}/*_1.fast*                                                   # names all the samples to analyse
-do
+for file in "${RAWDIR}"/*_1.fastq*; do
+    # Get the base filename without directory and without _1.fastq or _1.fastq.gz
+    base=$(basename "$file" | sed -E 's/_1\.fastq(.gz)?//')
 
-R1=$(basename $file | cut -file1 -d.)                                             # takes the file name, splits by the first '.' and keeps the first part
-base=$(echo $R1 | sed 's/_1//')                                                   # removes the read number, leaving only the raw sample name
+    R1="${RAWDIR}/${base}_1.fastq.gz"
+    R2="${RAWDIR}/${base}_2.fastq.gz"
 
-fastqc -q ${THREADS} ${RAWDIR}/${base}_1.fastq* \                  # running the fastqc command. -q supresses console messages. -t2 indicates 2 threads (2 CPU cores to process the file in parallel.
-                     ${RAWDIR}/${base}_2.fastq* \
-                  -o ${RAWQCDIR}
-
+    # Check if files exist before running FastQC
+    if [[ -f "$R1" && -f "$R2" ]]; then
+        echo "Running FastQC on $base"
+        fastqc -q -t 2 "$R1" "$R2" -o "${RAWQCDIR}"
+    else
+        echo "Skipping $base: files not found"
+    fi
 done
 
 #unloading the module
-module unload ${FASTQC}
+#module unload ${FASTQC}
 
 echo "FastQC on raw data complete."
 
 ## FASTP - TRIMMING AND FILTERING RAW DATA ########################################################################################################################
 
 #loading the module
-module load ${FASTP}
+#module load ${FASTP}
 
-#creating base names for files - list of sample names without suffices
-for file in ${RAWDIR}/*_1.fast*                                                   # names all the samples to analyse
+# creating base names for files - list of sample names without suffices
+for file in ${RAWDIR}/*_1.fast*   # names all the samples to analyse
 do
+    # takes the file name, strips directory, splits by first '.' to get main name
+    R1=$(basename "$file" | cut -d. -f1)
 
-R1=$(basename $file | cut -file1 -d.)                                             # takes the file name, splits by the first '.' and keeps the first part
-base=$(echo $R1 | sed 's/_1//')                                                   # removes the read number, leaving only the raw sample name
+    # removes the read number (_1), leaving only the base sample name
+    base=$(echo "$R1" | sed 's/_1//')
 
-fastp ${BASEQUAL} ${MAXUNQUAL} --cut_right\                                       # Trim low-quality bases from the 3’ end (right side) of reads. Use --trim_left to do the 5' end.
-        		-i ${RAWDIR}/${base}_1.fastq*\                            # Input R1 FASTQ files
-        		-I ${RAWDIR}/${base}_2.fastq*\                            # Input R2 FASTQ files (paired-end)
-        		-o ${TRIMDIR}/${base}_trim_R1.fastq.gz\                   # Output R1 trimmed file
-        		-O ${TRIMDIR}/${base}_trim_R2.fastq.gz\                   # Output R2 trimmed file
-        		-h ${TRIMDIR}/fastp_report.html \                         # Generates HTML QC report per sample
-        		-j ${TRIMDIR}/fastp_report.json                           # Generates JSON report (good for MultiQC)
+    # define paired file paths
+    R1="${RAWDIR}/${base}_1.fastq.gz"
+    R2="${RAWDIR}/${base}_2.fastq.gz"
+
+    # run fastp on paired-end files
+    fastp \
+        -i "$R1" \
+        -I "$R2" \
+        -o "${TRIMDIR}/${base}_trim_R1.fastq.gz" \
+        -O "${TRIMDIR}/${base}_trim_R2.fastq.gz" \
+        -h "${TRIMDIR}/${base}_fastp_report.html" \
+        -j "${TRIMDIR}/${base}_fastp_report.json" \
+        --qualified_quality_phred 33 \
+        --unqualified_percent_limit 40 \
+        --thread 2 \
+
+    echo "Finished fastp for sample: ${base}"
+
 done
 
-#unloading module
-module unload ${FASTP}
-
-echo "Fastp trimming and filtering complete."
+#unload module ${FASTP}
 
 ## FASTQC - TRIMMED AND FILTERED DATA QUALITY CONTROL #############################################################################################################
 
 #loading the module
-module load ${FASTQC}
+#module load ${FASTQC}
 
 #creating base names for files - list of sample names without suffices
 for file in ${RAWDIR}/*_1.fast*                                                   # names all the samples to analyse
 do
 
-R1=$(basename $file | cut -file1 -d.)                                             # takes the file name, splits by the first '.' and keeps the first part
+R1=$(basename $file | cut -d. -f1)                                             # takes the file name, splits by the first '.' and keeps the first part
 base=$(echo $R1 | sed 's/_1//')                                                   # removes the read number, leaving only the raw sample name
 
-fastqc -q ${THREADS} ${TRIMDIR}/${base}_trim_R1.fastq.gz \
+fastqc -q -t 2 ${TRIMDIR}/${base}_trim_R1.fastq.gz \
                      ${TRIMDIR}/${base}_trim_R2.fastq.gz \
                   -o ${TRIMQCDIR}
 
 done
 
 #unload module
-module unload ${FASTQC}
+#module unload ${FASTQC}
 
 echo "FastQC on trimmed data complete."
 
 ## MULTIQC #####################################################################################################################################################
 
 #loading module
-module load ${MULTIQC}
+#module load ${MULTIQC}
 
 
 multiqc ${TRIMDIR}\
@@ -122,3 +131,6 @@ multiqc ${TRIMDIR}\
 
 echo "MultiQC complete."
 echo "Ensure reference genome is ready for alignment."
+
+#module purge
+
