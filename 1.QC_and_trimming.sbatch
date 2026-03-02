@@ -16,7 +16,8 @@ RAWDIR=${WORKDIR}/data/raw                  # location of FASTA/Q files
 RAWQCDIR=${WORKDIR}/results/rawqc           # storage of fastqc results for raw data
 TRIMDIR=${WORKDIR}/data/trimmed             # storage of the trimmed data
 TRIMQCDIR=${WORKDIR}/results/trimmedqc      # storage of fastqc results for trimmed data
-MULTIQCDIR=${WORKDIR}/results/multiqc       # storage of multiqc results
+TRIMMULTIQCDIR=${WORKDIR}/results/trimmed_multiqc       # storage of multiqc results
+RAWMULTIQCDIR=${WORKDIR}/results/raw_multiqc
 
 #FASTQC="fastqc/0.12.1"
 #FASTP="fastp/0.23.2"
@@ -27,8 +28,7 @@ echo "Variables created."
 ## CREATING DIRECTORIES ####################################################################################################>
 
 mkdir -p ${WORKDIR}/{data/{raw,trimmed,reference,metadata},\
-results/{rawqc,trimmedqc,multiqc,alignment,variants,coverage,annotation},\
-scripts,\
+results/{rawqc,trimmedqc,trimmed_multiqc,raw_multiqc,alignment,variants,coverage,annotation},\
 logs,\
 config,\
 docs}
@@ -60,6 +60,20 @@ done
 #module unload ${FASTQC}
 
 echo "FastQC on raw data complete."
+
+## MULTIQC FOR RAW READS ##################################################################################################################
+
+#loading module
+#module load ${MULTIQC}
+
+
+multiqc ${RAWQCDIR}\
+       -o ${RAWMULTIQCDIR}
+
+echo "MultiQC complete."
+echo "Ensure reference genome is ready for alignment."
+
+#module purge
 
 ## FASTP - TRIMMING AND FILTERING RAW DATA ########################################################################################################################
 
@@ -110,8 +124,8 @@ R1=$(basename $file | cut -d. -f1)                                             #
 base=$(echo $R1 | sed 's/_1//')                                                   # removes the read number, leaving only the raw sample name
 
 fastqc -q -t 2 ${TRIMDIR}/${base}_trim_R1.fastq.gz \
-                     ${TRIMDIR}/${base}_trim_R2.fastq.gz \
-                  -o ${TRIMQCDIR}
+               ${TRIMDIR}/${base}_trim_R2.fastq.gz \
+               -o ${TRIMQCDIR}
 
 done
 
@@ -126,11 +140,10 @@ echo "FastQC on trimmed data complete."
 #module load ${MULTIQC}
 
 
-multiqc ${TRIMDIR}\
-       -o ${MULTIQCDIR}
+multiqc ${TRIMQCDIR}\
+       -o ${TRIMMULTIQCDIR}
 
 echo "MultiQC complete."
 echo "Ensure reference genome is ready for alignment."
 
 #module purge
-
