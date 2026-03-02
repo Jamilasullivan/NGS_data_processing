@@ -11,29 +11,19 @@
 
 ## PRESET VARIABLES ############################################################################################################################################
 
-WORKDIR=$(pwd)                              # current path
-RAWDIR=${WORKDIR}/data/raw                  # location of FASTA/Q files
-RAWQCDIR=${WORKDIR}/results/rawqc           # storage of fastqc results for raw data
-TRIMDIR=${WORKDIR}/data/trimmed             # storage of the trimmed data
-TRIMQCDIR=${WORKDIR}/results/trimmedqc      # storage of fastqc results for trimmed data
-TRIMMULTIQCDIR=${WORKDIR}/results/trimmed_multiqc       # storage of multiqc results
-RAWMULTIQCDIR=${WORKDIR}/results/raw_multiqc
+WORKDIR=$(pwd)                                          # current path
+RAWDIR=${WORKDIR}/data/raw                              # location of FASTA/Q files
+RAWQCDIR=${WORKDIR}/results/rawqc                       # storage of fastqc results for raw data
+TRIMDIR=${WORKDIR}/data/trimmed                         # storage of the trimmed data
+TRIMQCDIR=${WORKDIR}/results/trimmedqc                  # storage of fastqc results for trimmed data
+TRIMMULTIQCDIR=${WORKDIR}/results/trimmed_multiqc       # storage of trimmed multiqc results
+RAWMULTIQCDIR=${WORKDIR}/results/raw_multiqc            # storage of raw multiqc results
 
 #FASTQC="fastqc/0.12.1"
 #FASTP="fastp/0.23.2"
 #MULTIQC="multiqc/1.33"
 
 echo "Variables created."
-
-## CREATING DIRECTORIES ####################################################################################################>
-
-mkdir -p ${WORKDIR}/{data/{raw,trimmed,reference,metadata},\
-results/{rawqc,trimmedqc,trimmed_multiqc,raw_multiqc,alignment,variants,coverage,annotation},\
-logs,\
-config,\
-docs}
-
-echo "Directory structure created."
 
 ## FASTQC - RAW DATA QUALITY CONTROL ##############################################################################################################################
 
